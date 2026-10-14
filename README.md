@@ -31,3 +31,17 @@ export TG_CLEANER_BOT_TOKEN=your_token
 npm start
 ```
 Data is stored in `data/store.json` (override with `DATA_FILE`).
+
+## Serverless on Vercel (free Hobby)
+- `api/telegram.js` – webhook (grammY `webhookCallback`), checks `X-Telegram-Bot-Api-Secret-Token` against `WEBHOOK_SECRET`.
+- `api/cron.js` – daily Vercel Cron (`0 3 * * *`, see `vercel.json`), protected by `CRON_SECRET`. Runs weekly `/autokick` per chat and continues kick batches that didn't fit (each invocation stays under ~45s of kicking, well inside the 60s limit).
+- Storage: Upstash Redis (`KV_REST_API_URL`/`KV_REST_API_TOKEN` or `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`), per-chat hashes `kib:chat:<id>:meta|members|exempt`. Without those vars (local dev) it uses `data/kv.json`.
+
+Env vars: `BOT_TOKEN`, `WEBHOOK_SECRET`, `CRON_SECRET`, plus the Redis vars (added automatically when you connect Upstash from Vercel → Storage).
+
+Switch-over:
+```bash
+npm run migrate-to-redis                 # copy box data (needs Redis env vars)
+BOT_TOKEN=... WEBHOOK_SECRET=... npm run set-webhook -- https://<project>.vercel.app/api/telegram
+```
+Stop the local polling bot after setting the webhook. `npm run set-webhook -- --delete` goes back to polling.
